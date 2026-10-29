@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Etkin Çarpışma Laboratuvarı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: iki kap yan yana (T1 | T2), altında ortak ayarlar, grafikler ve animasyon senaryosu */
+:root {
+  --bg: #f3f5f8;
+  --panel: #ffffff;
+  --ink: #18212e;
+  --muted: #5b6676;
+  --line: #d7dde6;
+  --box: #0f1724;
+  --boxline: #2a3a52;
+  --a: #e0524a;
+  --b: #3b7be0;
+  --c: #2fa36f;
+  --d: #e3a72f;
+  --flash: #ffd84a;
+  --t1: #3b7be0;
+  --t2: #e0674a;
+  --accent: #1d6f8c;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1219; --panel: #161e29; --ink: #e6ebf2; --muted: #9aa6b6; --line: #2a3442;
+    --box: #070b11; --boxline: #2f4058; --accent: #5fb7d6; --t1: #6c9eef; --t2: #f08a6e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1219; --panel: #161e29; --ink: #e6ebf2; --muted: #9aa6b6; --line: #2a3442;
+  --box: #070b11; --boxline: #2f4058; --accent: #5fb7d6; --t1: #6c9eef; --t2: #f08a6e; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; display: grid; gap: 18px; }
+header { display: grid; gap: 4px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 4vw, 38px); line-height: 1.1; margin: 0; text-wrap: balance; }
+.lead { color: var(--muted); max-width: 70ch; margin: 0; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 19px; margin: 0; text-wrap: balance; }
+.sims { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.sim { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 10px; min-width: 0; }
+.simhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.tval { font-family: var(--mono); font-size: 22px; }
+.sim[data-k="0"] .tval { color: var(--t1); }
+.sim[data-k="1"] .tval { color: var(--t2); }
+canvas.box { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: 6px; background: var(--box); border: 1px solid var(--boxline); max-width: 100%; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.stat { display: grid; gap: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
+.stat b { font-family: var(--mono); font-weight: 500; font-size: 18px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); line-height: 1.25; }
+.stat.eff b { color: var(--accent); }
+label.slider { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: center; font-size: 13px; color: var(--muted); }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.controls { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: center; }
+.controls label.slider { min-width: 220px; flex: 1; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.btns { display: flex; gap: 8px; }
+button { font: 600 14px var(--body); padding: 8px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--panel); cursor: pointer; }
+button.ghost { background: transparent; color: var(--accent); }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--flash); outline-offset: 2px; }
+.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.chart { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 8px; min-width: 0; }
+.chart canvas { width: 100%; aspect-ratio: 16 / 9; display: block; max-width: 100%; }
+.cap { font-size: 13px; color: var(--muted); margin: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -1px; margin-right: 5px; }
+.notch { background: radial-gradient(circle at 70% 50%, #fff 0 22%, transparent 24%), var(--a); }
+section.story { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; }
+ol.scenes { margin: 0; padding-left: 22px; display: grid; gap: 8px; max-width: 80ch; }
+ol.scenes b { font-family: var(--display); font-weight: 600; }
+.qs { margin: 0; padding-left: 22px; display: grid; gap: 4px; max-width: 80ch; }
+.foot { font-size: 12px; color: var(--muted); max-width: 90ch; }
+@media (max-width: 760px) {
+  .sims, .charts { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Kim11.1.5 · Kim11.1.7 · animasyon taslağı</div>
+    <h1>Etkin Çarpışma Laboratuvarı</h1>
+    <p class="lead">Aynı A + B → C + D tepkimesi iki kapta, iki farklı sıcaklıkta yürüyor. Kırmızı A ile mavi B çarpıştığında tepkime ancak çarpışma enerjisi aktivasyon enerjisini aştığında ve tanecikler uygun yönde (beyaz noktalı yüzleri birbirine dönük) çarpıştığında gerçekleşir.</p>
+  </header>
+
+  <div class="sims">
+    <div class="sim" data-k="0">
+      <div class="simhead"><h2>1. kap</h2><span class="tval" id="tv0">300 K</span></div>
+      <canvas class="box" id="box0" aria-label="Düşük sıcaklıktaki kapta tanecik hareketi"></canvas>
+      <label class="slider" for="t0">Sıcaklık <input id="t0" type="range" min="200" max="800" step="10" value="300"></label>
+      <div class="stats">
+        <div class="stat"><b id="c0">0</b><span>A–B çarpışması / s</span></div>
+        <div class="stat eff"><b id="e0">0</b><span>etkin çarpışma / s</span></div>
+        <div class="stat"><b id="p0">0</b><span>etkin oran</span></div>
+        <div class="stat"><b id="n0">0</b><span>kalan A taneciği</span></div>
+      </div>
+    </div>
+    <div class="sim" data-k="1">
+      <div class="simhead"><h2>2. kap</h2><span class="tval" id="tv1">600 K</span></div>
+      <canvas class="box" id="box1" aria-label="Yüksek sıcaklıktaki kapta tanecik hareketi"></canvas>
+      <label class="slider" for="t1">Sıcaklık <input id="t1" type="range" min="200" max="800" step="10" value="600"></label>
+      <div class="stats">
+        <div class="stat"><b id="c1">0</b><span>A–B çarpışması / s</span></div>
+        <div class="stat eff"><b id="e1">0</b><span>etkin çarpışma / s</span></div>
+        <div class="stat"><b id="p1">0</b><span>etkin oran</span></div>
+        <div class="stat"><b id="n1">0</b><span>kalan A taneciği</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <label class="slider" for="ea">Aktivasyon enerjisi <input id="ea" type="range" min="1" max="4" step="0.1" value="2.2"></label>
+    <label class="slider" for="nn">Tanecik sayısı (derişim) <input id="nn" type="range" min="10" max="60" step="2" value="36"></label>
+    <label class="check"><input id="kat" type="checkbox"> Katalizör ekle</label>
+    <label class="check"><input id="yon" type="checkbox" checked> Uygun yönelme şartı</label>
+    <div class="btns"><button id="run">Durdur</button><button id="rst" class="ghost">Yeniden başlat</button></div>
+  </div>
+
+  <div class="legend">
+    <span><i class="notch"></i>A (beyaz nokta: tepkimeye giren yüz)</span>
+    <span><i style="background:var(--b)"></i>B</span>
+    <span><i style="background:var(--c)"></i>C (ürün)</span>
+    <span><i style="background:var(--d)"></i>D (ürün)</span>
+    <span><i style="background:var(--flash)"></i>etkin çarpışma</span>
+    <span><i style="background:#8a96a8"></i>etkin olmayan çarpışma</span>
+  </div>
+
+  <div class="charts">
+    <div class="chart">
+      <h2>Taneciklerin hız dağılımı</h2>
+      <canvas id="dist" aria-label="İki sıcaklık için hız dağılımı eğrileri"></canvas>
+      <p class="cap" id="distcap">Taralı alan, aktivasyon enerjisini aşabilecek kadar hızlı taneciklerin oranıdır.</p>
+    </div>
+    <div class="chart">
+      <h2>A taneciklerinin sayısı – zaman</h2>
+      <canvas id="time" aria-label="Kalan A tanecik sayısının zamanla değişimi"></canvas>
+      <p class="cap">Eğrinin eğimi tepkime hızını gösterir. Sıcak kapta A daha hızlı tükenir; A azaldıkça iki kapta da hız düşer.</p>
+    </div>
+  </div>
+
+  <section class="story">
+    <h2>Yayınevi için animasyon senaryosu (seslendirmeli, yaklaşık 90 s)</h2>
+    <ol class="scenes">
+      <li><b>Kap ve tanecikler.</b> Kapalı bir kapta A ve B tanecikleri gelişigüzel hareket eder. Seslendirme: “Bir tepkimenin gerçekleşmesi için tepken taneciklerinin çarpışması gerekir.”</li>
+      <li><b>Etkin olmayan çarpışma (enerji yetersiz).</b> Yavaş bir A ile B çarpışır ve geri seker; ekranda “Enerji < Ea” yazar. Ağır çekim.</li>
+      <li><b>Etkin olmayan çarpışma (yönelme uygun değil).</b> Hızlı A ile B, tepkimeye giren yüzleri dönük olmadan çarpışır ve seker; “Yönelme uygun değil” yazar.</li>
+      <li><b>Etkin çarpışma.</b> Hızlı ve doğru yönelmiş A ile B çarpışır, sarı parlama olur, C ve D oluşur. Seslendirme: “Yeterli enerji ve uygun yönelme ile gerçekleşen çarpışmalara etkin çarpışma denir.”</li>
+      <li><b>Sıcaklığın etkisi.</b> Ekran ikiye bölünür (300 K ve 600 K). Hız dağılımı eğrisi çizilir, Ea çizgisinin sağındaki alan sıcak kapta büyür. Sayaçlar etkin çarpışma sayısının arttığını gösterir. Seslendirme: “Sıcaklık arttıkça taneciklerin ortalama kinetik enerjisi artar. Aktivasyon enerjisini aşabilen tanecik sayısı ve birim zamandaki etkin çarpışma sayısı artar; tepkime hızlanır.”</li>
+      <li><b>Katalizör ve derişim (1.7 için ek).</b> Katalizör eklenince Ea çizgisi sola kayar, sıcaklık değişmeden etkin çarpışma artar. Tanecik sayısı artınca birim zamandaki çarpışma sayısı artar.</li>
+    </ol>
+    <h2>Öğrenciye sorular</h2>
+    <ol class="qs">
+      <li>İki kapta A–B çarpışma sayıları ile etkin çarpışma sayılarını karşılaştırınız. Hangisi sıcaklıktan daha çok etkileniyor?</li>
+      <li>“Uygun yönelme şartı” kapatılınca etkin oran nasıl değişti? Bu şart gerçek tepkimelerde neden önemlidir?</li>
+      <li>Katalizör eklendiğinde hız dağılımı eğrisi mi, Ea çizgisi mi değişti? Açıklayınız.</li>
+      <li>A–zaman grafiğine göre tepkime hızı zamanla nasıl değişiyor? Nedenini çarpışma teorisiyle açıklayınız.</li>
+    </ol>
+    <p class="foot">Not: Simülasyon iki boyutludur ve enerjiler ölçeklendirilmiştir (Ea, 300 K’deki ortalama kinetik enerji cinsinden). Sayılar nitel karşılaştırma içindir. Hız dağılımı iki boyutlu Maxwell-Boltzmann dağılımıdır; çizgi, tek bir taneciğin kinetik enerjisinin Ea’ya eşit olduğu hızı gösterir.</p>
+  </section>
+</div>
+
+<script>
+(() => {
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const VS = 62;            // hız birimi → piksel/saniye
+  const R = 7;              // tanecik yarıçapı (px)
+  const kT = T => T / 300;  // enerji birimi: 300 K'deki kT
+  const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const ui = {
+    ea: document.getElementById('ea'), nn: document.getElementById('nn'),
+    kat: document.getElementById('kat'), yon: document.getElementById('yon'),
+    run: document.getElementById('run'), rst: document.getElementById('rst')
+  };
+  const eaEff = () => +ui.ea.value * (ui.kat.checked ? 0.55 : 1);
+
+  class Sim {
+    constructor(k) {
+      this.k = k;
+      this.cv = document.getElementById('box' + k);
+      this.ctx = this.cv.getContext('2d');
+      this.tIn = document.getElementById('t' + k);
+      this.out = ['c', 'e', 'p', 'n'].map(s => document.getElementById(s + k));
+      this.tv = document.getElementById('tv' + k);
+      this.resize();
+      this.reset();
+    }
+    get T() { return +this.tIn.value; }
+    resize() {
+      const dpr = window.devicePixelRatio || 1;
+      const w = this.cv.clientWidth || 400, h = w * 3 / 4;
+      this.W = w; this.H = h;
+      this.cv.width = Math.round(w * dpr); this.cv.height = Math.round(h * dpr);
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (this.ps) for (const p of this.ps) { p.x = Math.min(Math.max(p.x, R), w - R); p.y = Math.min(Math.max(p.y, R), h - R); }
+    }
+    reset() {
+      const n = +ui.nn.value, s = Math.sqrt(kT(this.T));
+      this.ps = []; this.fx = []; this.log = []; this.hist = []; this.t = 0;
+      for (let i = 0; i < 2 * n; i++) {
+        let x, y, ok, tries = 0;
+        do { x = R + Math.random() * (this.W - 2 * R); y = R + Math.random() * (this.H - 2 * R);
+             ok = this.ps.every(q => (q.x - x) ** 2 + (q.y - y) ** 2 > (2.2 * R) ** 2); } while (!ok && ++tries < 200);
+        this.ps.push({ x, y, vx: gauss() * s, vy: gauss() * s, ang: Math.random() * 6.283, w: (Math.random() - 0.5) * 4, type: i < n ? 0 : 1 });
+      }
+      this.nA0 = n;
+    }
+    step(dt) {
+      const ps = this.ps, target = kT(this.T);
+      let ke = 0; for (const p of ps) ke += 0.5 * (p.vx * p.vx + p.vy * p.vy);
+      const cur = ke / ps.length;               // 2B'de tanecik başına ortalama KE = kT
+      if (cur > 0) { const lam = Math.sqrt(1 + 0.08 * (target / cur - 1)); for (const p of ps) { p.vx *= lam; p.vy *= lam; } }
+      for (const p of ps) {
+        p.x += p.vx * VS * dt; p.y += p.vy * VS * dt; p.ang += p.w * dt;
+        if (p.x < R) { p.x = R; p.vx = Math.abs(p.vx); } else if (p.x > this.W - R) { p.x = this.W - R; p.vx = -Math.abs(p.vx); }
+        if (p.y < R) { p.y = R; p.vy = Math.abs(p.vy); } else if (p.y > this.H - R) { p.y = this.H - R; p.vy = -Math.abs(p.vy); }
+      }
+      const ea = eaEff(), yon = ui.yon.checked;
+      for (let i = 0; i < ps.length; i++) for (let j = i + 1; j < ps.length; j++) {
+        const a = ps[i], b = ps[j], dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy;
+        if (d2 >= 4 * R * R || d2 === 0) continue;
+        const d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
+        const vn = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;   // yaklaşma hızı (birim)
+        // örtüşmeyi gider
+        const o = (2 * R - d) / 2; a.x -= nx * o; a.y -= ny * o; b.x += nx * o; b.y += ny * o;
+        if (vn <= 0) continue;
+        const pair = (a.type === 0 && b.type === 1) || (a.type === 1 && b.type === 0);
+        if (pair) {
+          const A = a.type === 0 ? a : b, B = A === a ? b : a, sx = A === a ? nx : -nx, sy = A === a ? ny : -ny;
+          const En = 0.25 * vn * vn;                            // ½·μ·vn², μ = ½
+          const yonOk = !yon || (Math.cos(A.ang) * sx + Math.sin(A.ang) * sy > 0 && -(Math.cos(B.ang) * sx + Math.sin(B.ang) * sy) > 0);
+          const eff = En >= ea && yonOk;
+          this.log.push({ t: this.t, eff });
+          this.fx.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, t: 0, eff });
+          if (eff) { A.type = 2; B.type = 3; }
+        }
+        a.vx -= vn * nx; a.vy -= vn * ny; b.vx += vn * nx; b.vy += vn * ny;   // eşit kütleli esnek çarpışma
+      }
+      this.t += dt;
+      for (const f of this.fx) f.t += dt;
+      this.fx = this.fx.filter(f => f.t < (f.eff ? 0.9 : 0.35));
+      this.log = this.log.filter(l => this.t - l.t < 5);
+      if (!this.hist.length || this.t - this.hist[this.hist.length - 1][0] > 0.25) this.hist.push([this.t, this.nA]);
+    }
+    get nA() { return this.ps.filter(p => p.type === 0).length; }
+    draw() {
+      const c = this.ctx, col = [css('--a'), css('--b'), css('--c'), css('--d')], fl = css('--flash');
+      c.clearRect(0, 0, this.W, this.H);
+      for (const p of this.ps) {
+        const g = c.createRadialGradient(p.x - R * 0.35, p.y - R * 0.4, R * 0.15, p.x, p.y, R);
+        g.addColorStop(0, '#ffffff'); g.addColorStop(0.25, col[p.type]); g.addColorStop(1, shade(col[p.type]));
+        c.fillStyle = g; c.beginPath(); c.arc(p.x, p.y, R, 0, 6.283); c.fill();
+        if (p.type < 2 && ui.yon.checked) {
+          c.fillStyle = '#ffffff'; c.beginPath();
+          c.arc(p.x + Math.cos(p.ang) * R * 0.62, p.y + Math.sin(p.ang) * R * 0.62, R * 0.3, 0, 6.283); c.fill();
+        }
+      }
+      for (const f of this.fx) {
+        if (f.eff) { const r = 6 + f.t * 40; c.strokeStyle = fl; c.globalAlpha = 1 - f.t / 0.9; c.lineWidth = 3; c.beginPath(); c.arc(f.x, f.y, r, 0, 6.283); c.stroke(); }
+        else { c.strokeStyle = '#8a96a8'; c.globalAlpha = 0.8 - f.t / 0.45; c.lineWidth = 1.5; c.beginPath(); c.arc(f.x, f.y, 5 + f.t * 20, 0, 6.283); c.stroke(); }
+        c.globalAlpha = 1;
+      }
+      const win = Math.min(5, Math.max(this.t, 0.001));
+      const nc = this.log.length, ne = this.log.filter(l => l.eff).length;
+      this.out[0].textContent = (nc / win).toFixed(1).replace('.', ',');
+      this.out[1].textContent = (ne / win).toFixed(1).replace('.', ',');
+      this.out[2].textContent = nc ? '%' + Math.round(100 * ne / nc) : '%0';
+      this.out[3].textContent = this.nA + ' / ' + this.nA0;
+      this.tv.textContent = this.T + ' K';
+    }
+  }
+  function shade(hex) {
+    const n = parseInt(hex.replace('#', ''), 16), f = 0.45;
+    return 'rgb(' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => Math.round(v * f)).join(',') + ')';
+  }
+
+  const sims = [new Sim(0), new Sim(1)];
+
+  // --- grafikler ---
+  function prep(cv) {
+    const dpr = window.devicePixelRatio || 1, w = cv.clientWidth || 400, h = w * 9 / 16;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); return [c, w, h];
+  }
+  const distCv = document.getElementById('dist'), timeCv = document.getElementById('time'), distCap = document.getElementById('distcap');
+  function axes(c, w, h, m, xl, yl) {
+    c.strokeStyle = css('--muted'); c.lineWidth = 1; c.beginPath();
+    c.moveTo(m.l, m.t); c.lineTo(m.l, h - m.b); c.lineTo(w - m.r, h - m.b); c.stroke();
+    c.fillStyle = css('--muted'); c.font = '12px ' + css('--body');
+    c.textAlign = 'right'; c.fillText(xl, w - m.r, h - 6);
+    c.save(); c.translate(13, m.t); c.rotate(-Math.PI / 2); c.textAlign = 'right'; c.fillText(yl, 0, 0); c.restore();
+  }
+  function drawDist() {
+    const [c, w, h] = prep(distCv), m = { l: 26, r: 10, t: 12, b: 24 };
+    c.clearRect(0, 0, w, h);
+    const vmax = 5.5, ea = eaEff(), vs = Math.sqrt(2 * ea);
+    const X = v => m.l + (v / vmax) * (w - m.l - m.r);
+    let fmax = 0;
+    const curves = sims.map(s => { const s2 = kT(s.T); const f = v => v / s2 * Math.exp(-v * v / (2 * s2)); fmax = Math.max(fmax, 1 / Math.sqrt(s2) * Math.exp(-0.5)); return f; });
+    const Y = f => h - m.b - (f / (fmax * 1.12)) * (h - m.t - m.b);
+    const cols = [css('--t1'), css('--t2')];
+    curves.forEach((f, k) => {
+      c.fillStyle = cols[k]; c.globalAlpha = 0.22; c.beginPath(); c.moveTo(X(vs), h - m.b);
+      for (let v = vs; v <= vmax; v += 0.02) c.lineTo(X(v), Y(f(v)));
+      c.lineTo(X(vmax), h - m.b); c.closePath(); c.fill(); c.globalAlpha = 1;
+      c.strokeStyle = cols[k]; c.lineWidth = 2.5; c.beginPath();
+      for (let v = 0; v <= vmax; v += 0.02) v === 0 ? c.moveTo(X(v), Y(f(v))) : c.lineTo(X(v), Y(f(v)));
+      c.stroke();
+    });
+    axes(c, w, h, m, 'tanecik hızı →', 'tanecik oranı →');
+    c.strokeStyle = css('--ink'); c.setLineDash([5, 4]); c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(X(vs), m.t); c.lineTo(X(vs), h - m.b); c.stroke(); c.setLineDash([]);
+    c.fillStyle = css('--ink'); c.font = '600 12px ' + css('--body'); c.textAlign = 'left';
+    c.fillText(ui.kat.checked ? 'Ea (katalizörlü)' : 'Ea', X(vs) + 5, m.t + 12);
+    const fr = sims.map(s => Math.exp(-ea / kT(s.T)));
+    c.textAlign = 'right'; c.font = '12px ' + css('--mono');
+    sims.forEach((s, k) => { c.fillStyle = cols[k]; c.fillText(s.T + ' K: %' + (100 * fr[k]).toFixed(1).replace('.', ','), w - m.r, m.t + 14 + 16 * k); });
+    distCap.textContent = 'Taralı alan, kinetik enerjisi Ea’yı aşan taneciklerin oranıdır: ' + sims[0].T + ' K’de %' + (100 * fr[0]).toFixed(1).replace('.', ',') + ', ' + sims[1].T + ' K’de %' + (100 * fr[1]).toFixed(1).replace('.', ',') + '.';
+  }
+  function drawTime() {
+    const [c, w, h] = prep(timeCv), m = { l: 26, r: 10, t: 12, b: 24 };
+    c.clearRect(0, 0, w, h);
+    const tmax = Math.max(30, ...sims.map(s => s.t)), n0 = Math.max(...sims.map(s => s.nA0));
+    const X = t => m.l + t / tmax * (w - m.l - m.r), Y = n => h - m.b - n / n0 * (h - m.t - m.b);
+    const cols = [css('--t1'), css('--t2')];
+    sims.forEach((s, k) => {
+      c.strokeStyle = cols[k]; c.lineWidth = 2.5; c.beginPath();
+      s.hist.forEach(([t, n], i) => i ? c.lineTo(X(t), Y(n)) : c.moveTo(X(t), Y(n)));
+      c.stroke();
+    });
+    axes(c, w, h, m, 'zaman →', 'A sayısı');
+  }
+
+  // --- döngü ---
+  let running = !reduce, last = performance.now(), acc = 0;
+  ui.run.textContent = running ? 'Durdur' : 'Başlat';
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (running) { for (const s of sims) { s.step(dt / 2); s.step(dt / 2); } }
+    for (const s of sims) s.draw();
+    acc += dt; if (acc > 0.2 || !running) { acc = 0; drawDist(); drawTime(); }
+    requestAnimationFrame(frame);
+  }
+  ui.run.addEventListener('click', () => { running = !running; ui.run.textContent = running ? 'Durdur' : 'Başlat'; });
+  ui.rst.addEventListener('click', () => sims.forEach(s => s.reset()));
+  ui.nn.addEventListener('change', () => sims.forEach(s => s.reset()));
+  [ui.ea, ui.kat, ui.yon, ...sims.map(s => s.tIn)].forEach(el => el.addEventListener('input', () => { drawDist(); }));
+  addEventListener('resize', () => { sims.forEach(s => s.resize()); drawDist(); drawTime(); });
+  drawDist(); drawTime();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

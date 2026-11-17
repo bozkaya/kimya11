@@ -1,0 +1,6 @@
+1.8 Görsel B modellerinin kaynakları (GaussView uzay dolgu çıktıları; arka plan şeffaf yapıldı, 600 dpi):
+NO.png   <- Kimya11/molecules/geom/no.png
+NO2.png  <- Kimya11/molecules/geom/no2.png
+NO3.png  <- Kimya10/Kimya10/Eksikler/anyon/no3-ud.png
+CO.png   <- Kimya9/modeller/sekiller/molekul/ud/co-1.png
+CO2.png  <- Kimya9/modeller/sekiller/molekul/ud/co2-1.png
